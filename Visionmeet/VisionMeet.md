@@ -18,3 +18,6 @@ Meeting-intelligence platform: Chrome/Edge extension (capture) + Next.js web app
 - Type hints everywhere; tests for every feature.
 - Secrets only in environment variables, never in code.
 - Keep changes small and explain them.
+
+
+Change the extraction design: create backend/app/llm.py with a small LLMClient interface and a GeminiClient implementation that returns JSON. extract_tasks() must use this interface, not a specific vendor. Read GEMINI_API_KEY from the environment. Update requirements.txt and .env.example. Keep Pydantic validation and one retry. Do not use emoji.
