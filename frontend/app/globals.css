@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #FFFFFF;
+  --bg-surface: #F5F6F8;
+  --border-color: #E2E5EA;
+  --text-main: #111827;
+  --text-muted: #5B6472;
+}
+
+.dark {
+  --bg-primary: #0F1419;
+  --bg-surface: #171D25;
+  --border-color: #2A323D;
+  --text-main: #E8EBEF;
+  --text-muted: #9AA4B2;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Dense, readable table utility */
+.table-dense th {
+  padding: 8px 12px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table-dense td {
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border-color);
+}

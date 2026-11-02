@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>VisionMeet</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo-mark"></span>
+      <span class="logo-text">VisionMeet</span>
+    </div>
+    <div id="user-badge" class="user-badge hidden"></div>
+  </header>
+
+  <main class="content">
+    <!-- State 1: Signed out -->
+    <section id="state-signed-out" class="state-view">
+      <h1 class="state-title">Sign in to your account</h1>
+      <p class="state-desc">Capture tab audio and review extracted tasks in your workspace.</p>
+      <form id="login-form">
+        <label for="email" class="input-label">Email address</label>
+        <input type="email" id="email" class="text-input" placeholder="name@company.com" required>
+
+        <label for="password" class="input-label">Password</label>
+        <input type="password" id="password" class="text-input" placeholder="Password" required>
+
+        <div id="login-error" class="error-banner hidden"></div>
+        <button type="submit" id="btn-login" class="primary-button">Sign in</button>
+      </form>
+    </section>
+
+    <!-- State 2: Ready -->
+    <section id="state-ready" class="state-view hidden">
+      <div class="meeting-meta">
+        <label for="meeting-title" class="input-label">Meeting title</label>
+        <input type="text" id="meeting-title" class="text-input" placeholder="E.g. Weekly team sync">
+      </div>
+
+      <div class="consent-group">
+        <label class="checkbox-label">
+          <input type="checkbox" id="consent-checkbox">
+          <span>All meeting participants are aware and have consented to note-taking.</span>
+        </label>
+      </div>
+
+      <button id="btn-start" class="primary-button" disabled>Start notes</button>
+    </section>
+
+    <!-- State 3: Recording -->
+    <section id="state-recording" class="state-view hidden">
+      <div class="recording-indicator-bar">
+        <span class="recording-pulse"></span>
+        <span class="recording-status">Recording tab audio</span>
+      </div>
+
+      <div class="timer-display" id="timer-display">00:00:00</div>
+
+      <p class="recording-hint">Audio is processed only after you stop the recording.</p>
+
+      <button id="btn-stop" class="danger-button">Stop recording</button>
+    </section>
+
+    <!-- State 4: Done -->
+    <section id="state-done" class="state-view hidden">
+      <div class="success-box">
+        <div class="success-icon">&#10003;</div>
+        <h2 class="state-title">Recording finished</h2>
+        <p class="state-desc">Audio uploaded. Task extraction is running.</p>
+      </div>
+
+      <button id="btn-open-web" class="primary-button">Open meeting in web app</button>
+      <button id="btn-reset" class="secondary-button">Record another meeting</button>
+    </section>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
