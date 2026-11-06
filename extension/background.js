@@ -14,11 +14,23 @@ async function ensureOffscreenDocument() {
   }
 }
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type !== "ensure-offscreen") return;
+async function sendToOffscreen(message) {
+  await ensureOffscreenDocument();
+  return chrome.runtime.sendMessage(message);
+}
 
-  ensureOffscreenDocument()
-    .then(() => sendResponse({ ok: true }))
-    .catch((error) => sendResponse({ ok: false, error: error.message }));
-  return true;
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "ensure-offscreen") {
+    ensureOffscreenDocument()
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
+
+  if (message.type === "start-recording" || message.type === "stop-recording") {
+    sendToOffscreen(message)
+      .then((response) => sendResponse(response || { ok: false, error: "No response from recorder" }))
+      .catch((error) => sendResponse({ ok: false, error: error.message }));
+    return true;
+  }
 });
