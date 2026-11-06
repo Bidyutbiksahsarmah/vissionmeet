@@ -182,10 +182,12 @@ btnStart.addEventListener("click", async () => {
     const title =
       meetingTitleInput.value.trim() ||
       `Meeting on ${new Date().toLocaleDateString()}`;
+    const { token } = await getToken();
     const started = await sendRuntimeMessage({
       type: "start-recording",
       streamId,
       title,
+      token,
     });
     if (!started?.ok) {
       throw new Error(started?.error || "Could not start recording");
