@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Search, Calendar, FileText, AlertCircle, Clock } from "lucide-react";
+import { Plus, Search, Calendar, FileText, AlertCircle, Clock, Trash2 } from "lucide-react";
 import { api, Meeting } from "@/lib/api";
 
 export default function MeetingsPage() {
@@ -13,6 +13,7 @@ export default function MeetingsPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newPlatform, setNewPlatform] = useState("browser");
   const [creating, setCreating] = useState(false);
+  const [deletingMeetingId, setDeletingMeetingId] = useState<number | null>(null);
 
   useEffect(() => {
     loadMeetings();
@@ -43,6 +44,24 @@ export default function MeetingsPage() {
       alert(err.message || "Could not create meeting");
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleDeleteMeeting = async (meeting: Meeting) => {
+    if (!window.confirm(`Delete "${meeting.title}"? This will permanently remove the meeting and its tasks.`)) {
+      return;
+    }
+
+    setDeletingMeetingId(meeting.id);
+    try {
+      await api.deleteMeeting(meeting.id);
+      setMeetings((currentMeetings) =>
+        currentMeetings.filter((currentMeeting) => currentMeeting.id !== meeting.id)
+      );
+    } catch (err: any) {
+      alert(err.message || "Could not delete meeting");
+    } finally {
+      setDeletingMeetingId(null);
     }
   };
 
@@ -152,13 +171,26 @@ export default function MeetingsPage() {
                   <td className="text-xs text-slateText-lightSec dark:text-slateText-darkSec font-mono">
                     {new Date(meeting.meeting_date || meeting.created_at).toLocaleDateString()}
                   </td>
-                  <td className="text-right">
-                    <Link
-                      href={`/meetings/${meeting.id}`}
-                      className="text-xs font-medium text-accent hover:underline"
-                    >
-                      View details
-                    </Link>
+                  <td>
+                    <div className="flex items-center justify-end gap-3">
+                      <Link
+                        href={`/meetings/${meeting.id}`}
+                        className="text-xs font-medium text-accent hover:underline"
+                      >
+                        View details
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMeeting(meeting)}
+                        disabled={deletingMeetingId === meeting.id}
+                        aria-label={`Delete ${meeting.title}`}
+                        title="Delete meeting"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        {deletingMeetingId === meeting.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

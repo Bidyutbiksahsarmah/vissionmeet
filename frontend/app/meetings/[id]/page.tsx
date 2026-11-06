@@ -15,6 +15,7 @@ import {
   AlertCircle,
   FileText,
   Volume2,
+  Trash2,
 } from "lucide-react";
 import { api, Meeting, Task, User as UserType } from "@/lib/api";
 import { TaskBadge } from "@/components/TaskBadge";
@@ -30,6 +31,7 @@ export default function MeetingDetailPage() {
   const [activeTab, setActiveTab] = useState<"tasks" | "summary" | "transcript">("tasks");
   const [processing, setProcessing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Edit task modal
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -114,6 +116,21 @@ export default function MeetingDetailPage() {
       alert(err.message || "Audio upload failed");
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleDeleteMeeting = async () => {
+    if (!meeting || !window.confirm(`Delete "${meeting.title}"? This will permanently remove the meeting and its tasks.`)) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      await api.deleteMeeting(meeting.id);
+      router.push("/meetings");
+    } catch (err: any) {
+      alert(err.message || "Could not delete meeting");
+      setDeleting(false);
     }
   };
 
@@ -226,6 +243,14 @@ export default function MeetingDetailPage() {
             >
               <RotateCw className={`w-3.5 h-3.5 ${processing ? "animate-spin" : ""}`} />
               Re-analyze meeting
+            </button>
+            <button
+              onClick={handleDeleteMeeting}
+              disabled={deleting}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-200 dark:border-red-800 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded transition-colors disabled:opacity-50"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {deleting ? "Deleting..." : "Delete meeting"}
             </button>
           </div>
         </div>
