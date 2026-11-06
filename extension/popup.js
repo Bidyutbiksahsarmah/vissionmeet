@@ -150,98 +150,74 @@ function updateTimer() {
   ].join(":");
 }
 
-// Start tab capture
-btnStart.addEventListener("click", () => {
+function sendRuntimeMessage(message) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(message, resolve);
+  });
+}
+
+// Delegate capture to the offscreen document because the popup is destroyed
+// as soon as it loses focus.
+btnStart.addEventListener("click", async () => {
   if (!consentCheckbox.checked) return;
 
-  chrome.tabCapture.capture({ audio: true, video: false }, (capturedStream) => {
-    if (!capturedStream) {
-      alert("Failed to capture tab audio. Ensure the active tab has audible media playing.");
-      return;
+  btnStart.disabled = true;
+  try {
+    const [activeTab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    if (!activeTab?.id) {
+      throw new Error("Could not identify the active browser tab");
     }
 
-    stream = capturedStream;
-    audioChunks = [];
-
-    // Keep audio audible to listener
-    const audioCtx = new AudioContext();
-    const source = audioCtx.createMediaStreamSource(stream);
-    source.connect(audioCtx.destination);
-
-    mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) {
-        audioChunks.push(event.data);
-      }
-    };
-
-    mediaRecorder.start(1000);
-    recordingStartTime = Date.now();
-
-    chrome.storage.local.set({
-      is_recording: true,
-      recording_start_time: recordingStartTime,
+    const streamId = await chrome.tabCapture.getMediaStreamId({
+      targetTabId: activeTab.id,
     });
+    const ensured = await sendRuntimeMessage({ type: "ensure-offscreen" });
+    if (!ensured?.ok) {
+      throw new Error(ensured?.error || "Could not start the recording service");
+    }
 
+    const title =
+      meetingTitleInput.value.trim() ||
+      `Meeting on ${new Date().toLocaleDateString()}`;
+    const started = await sendRuntimeMessage({
+      type: "start-recording",
+      streamId,
+      title,
+    });
+    if (!started?.ok) {
+      throw new Error(started?.error || "Could not start recording");
+    }
+
+    const data = await new Promise((resolve) =>
+      chrome.storage.local.get(
+        ["recording_start_time", "current_meeting_id"],
+        resolve
+      )
+    );
+    recordingStartTime = data.recording_start_time || Date.now();
+    currentMeetingId = data.current_meeting_id || null;
     startTimerTicker();
     showState(stateRecording);
-  });
+  } catch (err) {
+    alert(`Error: ${err.message}`);
+    btnStart.disabled = false;
+  }
 });
 
-// Stop tab capture and upload
 btnStop.addEventListener("click", async () => {
   if (timerInterval) clearInterval(timerInterval);
-
-  if (mediaRecorder && mediaRecorder.state !== "inactive") {
-    mediaRecorder.stop();
-  }
-  if (stream) {
-    stream.getTracks().forEach((track) => track.stop());
-  }
-
   btnStop.disabled = true;
   btnStop.textContent = "Processing and uploading...";
 
-  const { token } = await getToken();
-  const title = meetingTitleInput.value.trim() || `Meeting on ${new Date().toLocaleDateString()}`;
-
   try {
-    // 1. Create meeting session
-    const createRes = await fetch(`${API_BASE}/meetings`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ title, platform: "browser" }),
-    });
-
-    if (!createRes.ok) throw new Error("Could not create meeting session");
-    const meeting = await createRes.json();
-    currentMeetingId = meeting.id;
-
-    // 2. Upload audio blob
-    const audioBlob = new Blob(audioChunks, { type: "audio/webm" });
-    const formData = new FormData();
-    formData.append("file", audioBlob, `meeting_${meeting.id}.webm`);
-
-    const uploadRes = await fetch(`${API_BASE}/meetings/${meeting.id}/upload-audio`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    if (!uploadRes.ok) throw new Error("Audio upload failed");
-
-    // 3. Trigger processing pipeline (Whisper + Gemini)
-    await fetch(`${API_BASE}/meetings/${meeting.id}/process`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    // Clear active recording state in storage
-    chrome.storage.local.remove(["is_recording", "recording_start_time"]);
-    chrome.storage.local.set({ current_meeting_id: currentMeetingId });
-
+    const stopped = await sendRuntimeMessage({ type: "stop-recording" });
+    if (!stopped?.ok) {
+      throw new Error(stopped?.error || "Could not stop recording");
+    }
+    currentMeetingId = stopped.meetingId;
     showState(stateDone);
   } catch (err) {
     alert(`Error: ${err.message}`);
@@ -251,7 +227,6 @@ btnStop.addEventListener("click", async () => {
     btnStop.textContent = "Stop recording";
   }
 });
-
 // Open meeting in web app
 btnOpenWeb.addEventListener("click", async () => {
   const { token } = await getToken();
