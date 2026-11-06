@@ -55,9 +55,10 @@ async function startRecording(streamId, title) {
       if (event.data && event.data.size > 0) audioChunks.push(event.data);
     };
     mediaRecorder.start(1000);
+    const recordingStartTime = Date.now();
     return {
       meetingId: currentMeetingId,
-      recordingStartTime: Date.now(),
+      recordingStartTime,
     };
   } catch (error) {
     if (stream) stream.getTracks().forEach((track) => track.stop());
@@ -84,7 +85,6 @@ async function stopRecording() {
   await stopRecorder();
   if (stream) stream.getTracks().forEach((track) => track.stop());
   if (audioContext) await audioContext.close();
-
   const meetingId = currentMeetingId;
   if (!meetingId || !authToken) {
     throw new Error("Recording session is missing authentication");

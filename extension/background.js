@@ -1,5 +1,5 @@
 async function ensureOffscreenDocument() {
-  const offscreenUrl = chrome.runtime.getURL("offscreen.html");
+  const offscreenUrl = chrome.runtime.getURL("offscreen-v2.html");
   const contexts = await chrome.runtime.getContexts({
     contextTypes: ["OFFSCREEN_DOCUMENT"],
     documentUrls: [offscreenUrl],
@@ -7,7 +7,7 @@ async function ensureOffscreenDocument() {
 
   if (contexts.length === 0) {
     await chrome.offscreen.createDocument({
-      url: "offscreen.html",
+      url: "offscreen-v2.html",
       reasons: ["USER_MEDIA"],
       justification: "Record meeting tab audio after the extension popup closes.",
     });
