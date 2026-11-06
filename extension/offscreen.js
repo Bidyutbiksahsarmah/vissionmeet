@@ -31,26 +31,42 @@ async function startRecording(streamId, title) {
   const meeting = await createMeeting(title);
   currentMeetingId = meeting.id;
 
-  stream = await navigator.mediaDevices.getUserMedia({
-    audio: {
-      mandatory: {
-        chromeMediaSource: "tab",
-        chromeMediaSourceId: streamId,
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        mandatory: {
+          chromeMediaSource: "tab",
+          chromeMediaSourceId: streamId,
+        },
       },
-    },
-    video: false,
-  });
+      video: false,
+    });
 
-  audioContext = new AudioContext();
-  const source = audioContext.createMediaStreamSource(stream);
-  source.connect(audioContext.destination);
+    audioContext = new AudioContext();
+    const source = audioContext.createMediaStreamSource(stream);
+    source.connect(audioContext.destination);
 
-  audioChunks = [];
-  mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-  mediaRecorder.ondataavailable = (event) => {
-    if (event.data && event.data.size > 0) audioChunks.push(event.data);
-  };
-  mediaRecorder.start(1000);
+    audioChunks = [];
+    const options = MediaRecorder.isTypeSupported("audio/webm")
+      ? { mimeType: "audio/webm" }
+      : undefined;
+    mediaRecorder = new MediaRecorder(stream, options);
+    mediaRecorder.ondataavailable = (event) => {
+      if (event.data && event.data.size > 0) audioChunks.push(event.data);
+    };
+    mediaRecorder.start(1000);
+    return {
+      meetingId: currentMeetingId,
+      recordingStartTime: Date.now(),
+    };
+  } catch (error) {
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    if (audioContext) await audioContext.close();
+    stream = null;
+    audioContext = null;
+    currentMeetingId = null;
+    throw error;
+  }
 }
 
 function stopRecorder() {
@@ -106,7 +122,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === "start-recording") {
     authToken = message.token;
     startRecording(message.streamId, message.title)
-      .then(() => sendResponse({ ok: true }))
+      .then(({ meetingId, recordingStartTime }) =>
+        sendResponse({ ok: true, meetingId, recordingStartTime })
+      )
       .catch((error) => sendResponse({ ok: false, error: error.message }));
     return true;
   }

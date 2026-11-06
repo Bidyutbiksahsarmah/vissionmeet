@@ -193,14 +193,22 @@ btnStart.addEventListener("click", async () => {
       throw new Error(started?.error || "Could not start recording");
     }
 
-    const data = await new Promise((resolve) =>
-      chrome.storage.local.get(
-        ["recording_start_time", "current_meeting_id"],
-        resolve
+    recordingStartTime = Date.now();
+    currentMeetingId = started.meetingId || null;
+    await new Promise((resolve, reject) =>
+      chrome.storage.local.set(
+        {
+          recording_start_time: recordingStartTime,
+          current_meeting_id: currentMeetingId,
+          is_recording: true,
+        },
+        () => {
+          const error = chrome.runtime.lastError;
+          if (error) reject(new Error(error.message));
+          else resolve();
+        }
       )
     );
-    recordingStartTime = data.recording_start_time || Date.now();
-    currentMeetingId = data.current_meeting_id || null;
     startTimerTicker();
     showState(stateRecording);
   } catch (err) {
@@ -219,7 +227,7 @@ btnStop.addEventListener("click", async () => {
     if (!stopped?.ok) {
       throw new Error(stopped?.error || "Could not stop recording");
     }
-    currentMeetingId = stopped.meetingId;
+    currentMeetingId = stopped.meetingId || currentMeetingId;
     showState(stateDone);
   } catch (err) {
     alert(`Error: ${err.message}`);
